@@ -1,0 +1,45 @@
+flowchart TB
+
+    subgraph Internet___DMZ["Internet / DMZ"]
+        style Internet___DMZ stroke-dasharray: 5 5
+        User_Browser["User Browser"]
+        API_Gateway("API Gateway\n(Kong / AWS API Gateway)")
+    end
+
+    subgraph Application___Data_Tier["Application / Data Tier"]
+        style Application___Data_Tier stroke-dasharray: 5 5
+        Process_Modeler_Service("Process Modeler Service\n(Java / Spring Boot)")
+        Collaboration_Hub("Collaboration Hub\n(Node.js / Express)")
+        Process_Intelligence_Engine("Process Intelligence Engine\n(Python / Apache Spark)")
+        Notification_Service("Notification Service\n(Python / Celery)")
+        Primary_Database[("Primary Database\n(PostgreSQL (RDS))")]
+        Event_Log_Storage[("Event Log Storage\n(AWS S3 / Azure Blob Storage)")]
+        Session_Cache[("Session Cache\n(Redis)")]
+    end
+
+    subgraph Platform___External_Services["Platform / External Services"]
+        style Platform___External_Services stroke-dasharray: 5 5
+        Identity_Provider["Identity Provider"]
+    end
+
+    User_Browser ==>|HTTPS [confidential]| API_Gateway
+    API_Gateway -->|GRPC| Process_Modeler_Service
+    API_Gateway -->|GRPC| Collaboration_Hub
+    API_Gateway -->|GRPC [confidential]| Process_Intelligence_Engine
+    Process_Modeler_Service ==>|SQL [confidential]| Primary_Database
+    Process_Intelligence_Engine ==>|HTTPS [restricted]| Event_Log_Storage
+    API_Gateway -->|INTERNAL| Session_Cache
+    API_Gateway ==>|HTTPS [confidential]| Identity_Provider
+    Notification_Service ==>|SMTP| Identity_Provider
+
+    %% Styling
+    style User_Browser fill:#f9f,stroke:#333,stroke-width:2px
+    style API_Gateway fill:#fbb,stroke:#333,stroke-width:2px
+    style Process_Modeler_Service fill:#bfb,stroke:#333,stroke-width:2px
+    style Collaboration_Hub fill:#bfb,stroke:#333,stroke-width:2px
+    style Process_Intelligence_Engine fill:#bfb,stroke:#333,stroke-width:2px
+    style Primary_Database fill:#bbf,stroke:#333,stroke-width:2px
+    style Event_Log_Storage fill:#bbf,stroke:#333,stroke-width:2px
+    style Session_Cache fill:#bbf,stroke:#333,stroke-width:2px
+    style Identity_Provider fill:#f9f,stroke:#333,stroke-width:2px
+    style Notification_Service fill:#bfb,stroke:#333,stroke-width:2px

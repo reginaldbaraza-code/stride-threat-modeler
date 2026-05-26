@@ -1,0 +1,180 @@
+# STRIDE Threat Knowledge Base
+# Curated catalog of common threats organized by STRIDE category
+
+spoofing:
+  - id: S01
+    name: Authentication Bypass
+    severity: High-Critical
+    description: >
+      Attacker bypasses authentication through default credentials,
+      broken auth logic, or session manipulation.
+    indicators:
+      - No authentication on endpoints
+      - Default credentials in use
+      - Session tokens without expiration
+      - Missing MFA for admin access
+    mitigations:
+      - Implement OAuth 2.0 / OpenID Connect
+      - Enforce MFA for privileged operations
+      - Use strong session management with token rotation
+      - Disable default accounts and credentials
+    references:
+      - CWE-287
+      - OWASP Authentication Cheatsheet
+
+  - id: S02
+    name: Token/Session Hijacking
+    severity: High-Critical
+    description: >
+      Attacker steals or forges auth tokens via XSS, network
+      sniffing, or predictable token generation.
+    indicators:
+      - Tokens transmitted over HTTP
+      - Long-lived tokens without rotation
+      - Missing HttpOnly/Secure cookie flags
+    mitigations:
+      - Use HTTPS everywhere
+      - Set HttpOnly, Secure, SameSite cookie flags
+      - Implement short-lived tokens with rotation
+      - Bind tokens to client fingerprint
+
+  - id: S03
+    name: Service Impersonation
+    severity: High
+    description: >
+      Attacker impersonates a legitimate service in a microservices
+      architecture to intercept or redirect traffic.
+    indicators:
+      - No mutual TLS between services
+      - Trust based on network location only
+    mitigations:
+      - Implement mutual TLS (mTLS)
+      - Use service mesh with identity verification
+      - Verify service certificates
+
+tampering:
+  - id: T01
+    name: SQL Injection
+    severity: High-Critical
+    description: >
+      Attacker injects malicious SQL through user input to read,
+      modify, or delete database records.
+    indicators:
+      - String concatenation in SQL queries
+      - No input validation
+      - Raw user input in database operations
+    mitigations:
+      - Use parameterized queries / prepared statements
+      - Implement input validation with allowlists
+      - Use an ORM with automatic parameterization
+      - Apply least privilege for DB accounts
+    references:
+      - CWE-89
+      - OWASP SQL Injection Prevention
+
+  - id: T02
+    name: Man-in-the-Middle (MITM)
+    severity: High
+    description: >
+      Attacker intercepts and modifies data between two components,
+      altering requests or injecting malicious content.
+    indicators:
+      - HTTP instead of HTTPS
+      - No certificate validation
+      - Mixed content
+    mitigations:
+      - Enforce TLS 1.3 (minimum 1.2)
+      - Implement HSTS headers
+      - Use certificate pinning for critical connections
+
+repudiation:
+  - id: R01
+    name: Missing Audit Trail
+    severity: Medium-High
+    description: >
+      No logging for security events, preventing incident
+      investigation and forensic analysis.
+    indicators:
+      - No centralized logging
+      - Missing timestamps
+      - No actor identity in log entries
+      - Logs stored alongside audited system
+    mitigations:
+      - Structured audit logging (who, what, when, where, outcome)
+      - Centralized tamper-proof SIEM
+      - Log all auth events and data access
+      - Protect log integrity
+
+information_disclosure:
+  - id: I01
+    name: Sensitive Data Exposure
+    severity: High-Critical
+    description: >
+      PII, credentials, or financial data exposed through
+      unencrypted storage, verbose errors, or API responses.
+    indicators:
+      - PII in log files
+      - Credentials in config/repos
+      - Stack traces in production
+      - API over-fetching
+    mitigations:
+      - Encrypt at rest and in transit
+      - Field-level encryption for PII
+      - Sanitize production error responses
+      - API response filtering
+      - Scan repos for committed secrets
+    references:
+      - CWE-200
+
+denial_of_service:
+  - id: D01
+    name: Resource Exhaustion
+    severity: Medium-High
+    description: >
+      Attacker causes excessive resource consumption through
+      crafted requests, making service unavailable.
+    indicators:
+      - No rate limiting
+      - Unlimited file upload sizes
+      - Complex queries without timeouts
+      - No connection pooling limits
+    mitigations:
+      - Rate limiting per client/IP/user
+      - Request size limits and timeouts
+      - Connection pooling with limits
+      - Circuit breakers
+      - Auto-scaling
+
+elevation_of_privilege:
+  - id: E01
+    name: Insecure Direct Object Reference (IDOR)
+    severity: High-Critical
+    description: >
+      Attacker manipulates object identifiers to access resources
+      belonging to other users or tenants.
+    indicators:
+      - Sequential/predictable resource IDs
+      - No ownership checks on access
+      - Client-side only authorization
+    mitigations:
+      - Use UUIDs instead of sequential IDs
+      - Server-side ownership verification on every request
+      - Tenant-scoped queries
+    references:
+      - CWE-639
+
+  - id: E02
+    name: Privilege Escalation via Role Manipulation
+    severity: High-Critical
+    description: >
+      Attacker modifies their role through API manipulation
+      or exploiting missing server-side checks.
+    indicators:
+      - Role info stored client-side without server validation
+      - Missing authz checks on admin endpoints
+      - Role assignment through user-controllable parameters
+    mitigations:
+      - Validate roles server-side on every request
+      - RBAC with least privilege
+      - Separate admin endpoints behind additional auth
+      - Audit role changes

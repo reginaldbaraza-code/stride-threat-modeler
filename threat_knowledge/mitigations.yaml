@@ -1,0 +1,95 @@
+# Mitigation Recommendations by Security Control
+# Maps security controls to the STRIDE categories they address
+
+authentication:
+  addresses: [spoofing]
+  controls:
+    - name: OAuth 2.0 / OpenID Connect
+      description: Industry-standard delegated authentication
+      applies_to: [web_apps, apis, microservices]
+    - name: Multi-Factor Authentication (MFA)
+      description: Require additional verification for sensitive operations
+      applies_to: [admin_access, financial_transactions, data_export]
+    - name: Mutual TLS (mTLS)
+      description: Both client and server verify identity via certificates
+      applies_to: [service_to_service, api_gateway]
+    - name: SAML 2.0
+      description: Enterprise SSO federation
+      applies_to: [enterprise_apps, saas_platforms]
+
+encryption:
+  addresses: [tampering, information_disclosure]
+  controls:
+    - name: TLS 1.3
+      description: Encrypt all data in transit
+      applies_to: [all_network_traffic]
+    - name: AES-256 at rest
+      description: Encrypt stored data
+      applies_to: [databases, file_storage, backups]
+    - name: Field-level encryption
+      description: Encrypt individual PII fields within records
+      applies_to: [pii_fields, payment_data, health_records]
+    - name: HSTS Headers
+      description: Force HTTPS and prevent downgrade attacks
+      applies_to: [web_apps]
+
+authorization:
+  addresses: [elevation_of_privilege]
+  controls:
+    - name: Role-Based Access Control (RBAC)
+      description: Assign permissions based on user roles
+      applies_to: [all_applications]
+    - name: Attribute-Based Access Control (ABAC)
+      description: Fine-grained access based on attributes
+      applies_to: [complex_permission_models]
+    - name: Tenant Isolation
+      description: Enforce data separation between tenants
+      applies_to: [multi_tenant_saas]
+    - name: Least Privilege
+      description: Grant minimum permissions needed for each role
+      applies_to: [all_systems]
+
+logging:
+  addresses: [repudiation]
+  controls:
+    - name: Structured Audit Logging
+      description: "Log: who, what, when, where, outcome for all state changes"
+      applies_to: [all_applications]
+    - name: Centralized SIEM
+      description: Aggregate logs in tamper-proof central system
+      applies_to: [all_infrastructure]
+    - name: Log Integrity Protection
+      description: Sign or write-once storage to prevent tampering
+      applies_to: [audit_logs, compliance_logs]
+
+input_validation:
+  addresses: [tampering, elevation_of_privilege]
+  controls:
+    - name: Allowlist Validation
+      description: Only accept known-good input patterns
+      applies_to: [all_user_input]
+    - name: Parameterized Queries
+      description: Prevent SQL injection via prepared statements
+      applies_to: [database_operations]
+    - name: Content Security Policy
+      description: Prevent XSS via browser-enforced content restrictions
+      applies_to: [web_apps]
+    - name: Request Size Limits
+      description: Limit payload size to prevent abuse
+      applies_to: [apis, file_uploads]
+
+availability:
+  addresses: [denial_of_service]
+  controls:
+    - name: Rate Limiting
+      description: Limit requests per client/IP/user
+      applies_to: [apis, login_endpoints]
+    - name: Web Application Firewall (WAF)
+      description: Filter malicious traffic at the edge
+      applies_to: [internet_facing_services]
+    - name: Auto-Scaling
+      description: Elastically scale compute for demand spikes
+      applies_to: [cloud_services]
+    - name: Circuit Breakers
+      description: Prevent cascade failures from downstream issues
+      applies_to: [microservices, external_integrations]

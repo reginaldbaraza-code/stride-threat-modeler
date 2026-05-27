@@ -1,66 +1,60 @@
 # STRIDE Threat Modeler 🛡️
 
-A Python framework for conducting **STRIDE-based threat models** on system architectures. Define your system as code, auto-generate Data Flow Diagrams, identify threats per STRIDE category, score risks with DREAD, and produce actionable reports.
+A Python framework for running STRIDE-based threat models on system architectures. You describe your system in Python — components, data flows, trust boundaries — and the tool automatically identifies threats, scores them with DREAD, and generates reports.
 
-## Why This Exists
+## What It Does
 
-Threat modeling is a proactive security practice — it identifies threats **before** they become vulnerabilities. But manual threat modeling is slow, inconsistent, and hard to reproduce. This framework makes it:
+1. **You define your architecture as code** — web servers, databases, APIs, data flows between them
+2. **The STRIDE analyzer scans every component and flow** — checking for missing authentication, unencrypted data, absent logging, and more
+3. **Each threat gets a DREAD risk score** (5–50 scale) so you know what to fix first
+4. **You get a Markdown report and a Mermaid data flow diagram** ready for docs or pull requests
 
-- **Repeatable** — Define architectures as Python code, re-run analysis anytime
-- **Automated** — STRIDE rules fire against every component and data flow
-- **Auditable** — JSON/Markdown reports with full threat traceability
-- **Educational** — Learn STRIDE and DREAD by seeing them applied to real architectures
+## What Is STRIDE?
 
-## STRIDE Framework
+STRIDE is a threat classification model from Microsoft. Each letter represents a category of attack:
 
-STRIDE is a threat classification model developed at Microsoft:
-
-| Category | Threat | Example | Typical Mitigation |
-|----------|--------|---------|-------------------|
-| **S**poofing | Impersonating a user or system | Forged OAuth tokens | MFA, certificate validation |
-| **T**ampering | Modifying data maliciously | MITM altering API payloads | TLS, HMAC, digital signatures |
-| **R**epudiation | Denying an action occurred | No audit trail for deletions | Structured logging, audit trails |
-| **I**nfo Disclosure | Exposing data to unauthorized parties | API leaking PII in error responses | Encryption, access controls |
-| **D**enial of Service | Making systems unavailable | Volumetric DDoS attack | Rate limiting, CDN, auto-scaling |
-| **E**levation of Privilege | Gaining unauthorized access | User exploiting IDOR to access admin | RBAC, least privilege, input validation |
+| Letter | Threat | What goes wrong | Example |
+|--------|--------|----------------|---------|
+| **S** | Spoofing | Someone pretends to be a user or service | Forged login tokens |
+| **T** | Tampering | Data is modified without authorization | SQL injection changing records |
+| **R** | Repudiation | Actions can't be traced back to who did them | No audit log for deletions |
+| **I** | Info Disclosure | Sensitive data leaks to the wrong people | API returning PII in errors |
+| **D** | Denial of Service | The system becomes unavailable | DDoS attack flooding the server |
+| **E** | Elevation of Privilege | A user gains access they shouldn't have | Regular user reaching admin endpoints |
 
 ## Quick Start
-
-### Installation
 
 ```bash
 git clone https://github.com/reginaldbaraza-code/stride-threat-modeler.git
 cd stride-threat-modeler
-pip install -e .
-```
+pip install -e ".[dev]"
 
-### Run an Example
-
-```bash
-# Threat model a SaaS process management platform
+# Run the SaaS platform example (models a system similar to SAP Signavio)
 python examples/signavio_like_app.py
 
-# Threat model a microservices API
+# Run the microservices example
 python examples/microservices_api.py
 
-# Generate a DFD diagram (requires graphviz)
-python -m src.cli diagram examples/signavio_like_app.py --output docs/diagrams/saas_dfd.png
+# Run all 51 tests
+pytest -v
 ```
 
-### Define Your Own System
+The examples generate a Markdown report and a Mermaid diagram in `examples/outputs/`.
+
+## Define Your Own System
 
 ```python
-from src.model import ThreatModel, Component, ComponentType, DataFlow, TrustBoundary, DataClassification, Protocol
+from src.model import ThreatModel, Component, ComponentType, DataFlow, DataClassification
 from src.stride import StrideAnalyzer
 from src.dread import DreadScorer
 
-# Define components
+# Step 1: Define components with their security properties
 web_server = Component(
     name="Web Server",
     component_type=ComponentType.PROCESS,
     is_internet_facing=True,
     has_authentication=True,
-    has_authorization=False,  # ← STRIDE will flag this
+    has_authorization=False,  # ← STRIDE will flag this as Elevation of Privilege risk
     has_logging=True,
 )
 
@@ -71,7 +65,7 @@ database = Component(
     has_encryption_at_rest=True,
 )
 
-# Define data flows
+# Step 2: Define how data moves between components
 api_flow = DataFlow(
     name="User requests",
     source=web_server,
@@ -81,18 +75,14 @@ api_flow = DataFlow(
     is_encrypted=True,
 )
 
-# Build the model
+# Step 3: Build the model and analyze
 tm = ThreatModel(name="My App", description="Example application")
 tm.add_component(web_server)
 tm.add_component(database)
 tm.add_dataflow(api_flow)
 
-# Analyze
-analyzer = StrideAnalyzer()
-threats = analyzer.analyze(tm)
-
-scorer = DreadScorer()
-scored = scorer.score_all(threats)
+threats = StrideAnalyzer().analyze(tm)
+scored = DreadScorer().score_all(threats)
 
 for t in sorted(scored, key=lambda x: x.dread_score, reverse=True):
     print(f"[{t.severity}] {t.category.value}: {t.title} (DREAD: {t.dread_score}/50)")
@@ -100,64 +90,55 @@ for t in sorted(scored, key=lambda x: x.dread_score, reverse=True):
 
 ## DREAD Risk Scoring
 
-Each identified threat is scored across five dimensions (1-10 each):
+Each threat is scored from 5 to 50 across five dimensions:
 
-| Dimension | What It Measures |
-|-----------|-----------------|
-| **D**amage | How bad is it if exploited? |
-| **R**eproducibility | How easy to reproduce? |
-| **E**xploitability | How much skill/tooling needed? |
-| **A**ffected Users | How many users impacted? |
-| **D**iscoverability | How easy to find? |
+| Dimension | Question it answers |
+|-----------|-------------------|
+| **D**amage | How bad is it if this threat is exploited? |
+| **R**eproducibility | How easily can an attacker reproduce this? |
+| **E**xploitability | How much skill or tooling is needed? |
+| **A**ffected Users | How many users would be impacted? |
+| **D**iscoverability | How easy is the vulnerability to find? |
 
-**Total DREAD Score** = sum of all five (max 50). Severity mapping:
-- 40-50: Critical
-- 30-39: High
-- 20-29: Medium
-- 10-19: Low
-- 1-9: Informational
+Scores map to severity: 40–50 = Critical, 30–39 = High, 20–29 = Medium, 10–19 = Low, 5–9 = Info.
 
 ## Project Structure
 
 ```
 stride-threat-modeler/
 ├── src/
-│   ├── model.py          # Core: System, Component, DataFlow, TrustBoundary
-│   ├── stride.py          # STRIDE threat identification engine
-│   ├── dread.py           # DREAD risk scoring
-│   ├── diagram.py         # DFD generator (Mermaid output)
-│   ├── report.py          # Markdown/HTML report generator
-│   ├── threats_db.py      # Knowledge base of common threats
-│   └── cli.py             # CLI interface
+│   ├── model.py          # Core dataclasses: Component, DataFlow, TrustBoundary, ThreatModel
+│   ├── stride.py          # STRIDE analyzer — scans components and flows for threats
+│   ├── dread.py           # DREAD scorer — heuristic and manual risk scoring
+│   ├── diagram.py         # Generates Mermaid data flow diagrams
+│   ├── report.py          # Generates Markdown reports with executive summary
+│   ├── threats_db.py      # 10 curated threat templates (S01–E02)
+│   └── cli.py             # CLI: analyze, report, diagram, threats commands
 ├── examples/
-│   ├── signavio_like_app.py      # SaaS process management platform
-│   ├── microservices_api.py      # Microservice architecture
-│   └── simple_web_app.py         # Basic web application
-├── tests/
-│   ├── test_model.py
-│   ├── test_stride.py
-│   ├── test_dread.py
-│   └── test_report.py
+│   ├── signavio_like_app.py   # 10-component SaaS platform (interview demo)
+│   ├── microservices_api.py   # E-commerce microservices
+│   └── simple_web_app.py      # Deliberately insecure blog for learning
+├── tests/                     # 51 tests across 4 test files
 ├── threat_knowledge/
-│   ├── stride_threats.yaml       # Curated threat catalog
-│   └── mitigations.yaml          # Mitigation recommendations
+│   ├── stride_threats.yaml    # Threat catalog organized by STRIDE category
+│   └── mitigations.yaml       # Mitigation controls mapped to STRIDE
 └── docs/
-    ├── stride-methodology.md
-    └── dread-scoring.md
+    ├── stride-methodology.md  # How STRIDE works and when to use it
+    └── dread-scoring.md       # DREAD scoring guide with examples
 ```
 
 ## Tech Stack
 
-- **Python 3.11+** — core language
+- **Python 3.11+**
 - **PyYAML** — threat knowledge base
-- **pytest** — testing framework
-- **Graphviz** (optional) — DFD diagram rendering
+- **Click** — CLI interface
+- **Jinja2** — report templating
+- **pytest** — 51 tests
 
-## Related Reading
+## Further Reading
 
 - [STRIDE Threat Model (Microsoft)](https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats)
 - [OWASP Threat Modeling](https://owasp.org/www-community/Threat_Modeling)
-- [pytm - Pythonic Threat Modeling](https://github.com/OWASP/pytm)
 - [Adam Shostack's Four Questions](https://shostack.org/resources/threat-modeling)
 
 ## License
